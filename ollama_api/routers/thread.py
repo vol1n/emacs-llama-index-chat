@@ -1,0 +1,54 @@
+from fastapi import APIRouter
+from services.thread_service import thread_service
+from services.llama_service import llama_service
+from models import MessageRequest, EditMessageRequest, DeleteRequest
+
+from llama_index.core.llms import ChatMessage
+
+router = APIRouter(prefix="/thread")
+
+@router.post("/message")
+async def send_message(request: MessageRequest):
+    thread_id = request.thread_id
+    content = request.content
+    messages = thread_service.get_thread(thread_id)
+    if isinstance(messages, str):  # Thread not found
+        messages = []
+    messages.append({"content": content, "role": user})
+    result = thread_service.save_thread(thread_id, messages)
+    return {"message": result}
+
+@router.put("/message")
+async def edit_message(request: EditMessageRequest):
+    result = thread_service.edit_message(request.thread_id, request.message_id, request.new_content)
+    return {"message": result}
+
+@router.delete("/message")
+async def delete_message(request: DeleteRequest):
+    if request.message_id is not None:
+        result = thread_service.delete_message(request.thread_id, request.message_id)
+    else:
+        result = thread_service.delete_thread(request.thread_id)
+    return {"message": result}
+
+@router.get("/{thread_id}")
+async def get_thread(thread_id: str):
+    result = thread_service.get_thread(thread_id)
+    return {"message": result}
+
+@router.post("/{thread_id}/generate")
+async def generate_response(thread_id: str):
+    messages = thread_service.get_thread(thread_id)
+    if isinstance(messages, str):  # Thread not found
+        return {"message": "Thread not found"}
+    
+    formatted_messages = [
+        ChatMessage(role=msg["role"], content=msg["content"])
+
+        for msg in messages
+    ]
+    
+    response = llama_service.llm.chat(formatted_messages)
+    messages.append(response["message"]["raw"])
+    thread_service.save_thread(thread_id, messages)
+    return {"message": response}

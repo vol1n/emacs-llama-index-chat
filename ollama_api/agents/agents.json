@@ -1,0 +1,13 @@
+{
+    "dispatcher" : {
+	"prompt": "",
+	"tools": [],
+	"file_access": {}
+    },
+    "code_agent": {
+	"prompt": "",
+	"tools": [],
+	"file_access": {}
+    },
+    
+}

@@ -1,0 +1,61 @@
+### Summary of LLM Function Calling with LlamaIndex
+
+**LlamaIndex** provides robust support for function calling with LLMs, allowing users to fine-tune models like GPT-3.5-turbo for structured data extraction. Here's an overview of how this process works and the steps involved:
+
+### 1. **Fine-Tuning with Function Calling**
+
+The primary use case for fine-tuning with function calling is to enhance the capabilities of models like GPT-3.5-turbo by distilling outputs from more advanced models like GPT-4. This approach is particularly useful for tasks such as structured data extraction and improving function call handling.
+
+**Steps Involved:**
+- **Defining Pydantic Models:** Create data models (e.g., for songs and albums) using Pydantic.
+- **Logging Inputs and Outputs:** Use OpenAI's Pydantic Program to generate structured outputs and log them.
+- **Fine-Tuning:** Use the logged data to fine-tune the LLM, enhancing its ability to handle function calls.
+
+Example Code Snippet:
+```python
+from llama_index.program import OpenAIPydanticProgram
+from pydantic import BaseModel
+from llama_index.llms import OpenAI
+from llama_index.callbacks import OpenAIFineTuningHandler, CallbackManager
+from typing import List
+
+class Song(BaseModel):
+    title: str
+    length_seconds: int
+
+class Album(BaseModel):
+    name: str
+    artist: str
+    songs: List[Song]
+
+finetuning_handler = OpenAIFineTuningHandler()
+callback_manager = CallbackManager([finetuning_handler])
+
+llm = OpenAI(model="gpt-4", callback_manager=callback_manager)
+
+prompt_template_str = """Generate an example album, with an artist and a list of songs. Using the movie {movie_name} as inspiration."""
+program = OpenAIPydanticProgram.from_defaults(output_cls=Album, prompt_template_str=prompt_template_str, llm=llm, verbose=False)
+```
+
+### 2. **Multi-Function Calling**
+
+LlamaIndex also supports multi-function calling, allowing multiple function calls within a single interaction between the user and the agent. This feature leverages the latest OpenAI API updates to enhance dialogue capabilities and perform complex tasks within a single turn.
+
+**Benefits:**
+- Improved interaction efficiency by handling multiple functions in one go.
+- Enhanced context management, as the model can maintain state across multiple function calls.
+
+### 3. **Use Cases and Applications**
+
+Function calling with LlamaIndex can be applied to various scenarios, including:
+- **Context-Augmented Retrieval:** Enhancing retrieval-augmented generation (RAG) systems by fine-tuning models to handle specific retrieval tasks.
+- **Structured Data Extraction:** Automating the extraction of structured data from unstructured text inputs, making it useful for building knowledge bases or databases.
+- **Advanced Query Handling:** Enabling models to handle complex queries that require multiple steps or interactions.
+
+### Documentation and Resources
+
+For more detailed instructions, examples, and code snippets, you can refer to the following sections in the LlamaIndex documentation:
+- [Fine Tuning with Function Calling](https://docs.llamaindex.ai/en/stable/fine_tuning.html)
+- [Multi-Function Calling with OpenAI Agents](https://docs.llamaindex.ai/en/stable/multi_function_calling.html)
+
+These sections provide comprehensive guides on setting up and using function calling with LlamaIndex, including specific examples and best practices.
