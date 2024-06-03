@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 
+class FirstMessageRequest(BaseModel):
+    content: str
+
 class IngestRequest(BaseModel):
     directory_path: str
 

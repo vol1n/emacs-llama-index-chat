@@ -1,11 +1,22 @@
 from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 from services.thread_service import thread_service
 from services.llama_service import llama_service
-from models import MessageRequest, EditMessageRequest, DeleteRequest
+from models import MessageRequest, EditMessageRequest, DeleteRequest, FirstMessageRequest
 
 from llama_index.core.llms import ChatMessage
 
 router = APIRouter(prefix="/thread")
+
+import uuid
+
+@router.post("/")
+async def create_thread(request: FirstMessageRequest):
+    thread_id = str(uuid.uuid1())
+    message = ChatMessage(role="user", content=request.content)
+    message = {"role": "user", "content": request.content}
+    result = thread_service.save_thread(thread_id, [message])
+    return {"thread_id": thread_id, "message": result}
 
 @router.post("/message")
 async def send_message(request: MessageRequest):
@@ -52,3 +63,34 @@ async def generate_response(thread_id: str):
     messages.append(response["message"]["raw"])
     thread_service.save_thread(thread_id, messages)
     return {"message": response}
+
+
+def generate_tokens(messages, callback):
+    gen = llama_service.llm.stream_chat(messages)
+    full = ""
+    try:
+        for msg in gen:
+            print("delta")
+            print(msg.delta)
+            full += msg.delta
+            yield msg.delta
+    finally:
+        callback(full)
+
+@router.post("/{thread_id}/stream")
+async def stream_response(thread_id: str):
+    messages = thread_service.get_thread(thread_id)
+    if isinstance(messages, str):  # Thread not found
+        return {"message": "Thread not found"}
+    print("messages")
+    print(messages)
+    formatted_messages = [
+        ChatMessage(role=msg["role"], content=msg["content"])
+
+        for msg in messages
+    ]
+    def cb(full_message):
+        #messages.append(ChatMessage(role="assistant", content=full_message))
+        messages.append({"role": "assistant", "content": full_message})
+        thread_service.save_thread(thread_id, messages)
+    return StreamingResponse(generate_tokens(formatted_messages, cb), media_type="text/plain")
